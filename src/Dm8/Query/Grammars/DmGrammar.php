@@ -5,7 +5,6 @@ namespace LaravelDm8\Dm8\Query\Grammars;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Database\Query\Grammars\Grammar;
-use Illuminate\Support\Str;
 use LaravelDm8\Dm8\Dm8ReservedWords;
 
 class DmGrammar extends Grammar
@@ -93,7 +92,7 @@ class DmGrammar extends Grammar
         }
 
         if ($query->unions) {
-            $sql = $this->wrapUnion($sql).' '.$this->compileUnions($query);
+            $sql = $this->wrapUnion($sql) . ' ' . $this->compileUnions($query);
         }
 
         $query->columns = $original;
@@ -108,7 +107,7 @@ class DmGrammar extends Grammar
      */
     protected function isPaginationable(Builder $query, array $components)
     {
-        return ($query->limit > 0 || $query->offset > 0) && ! array_key_exists('lock', $components);
+        return ($query->limit > 0 || $query->offset > 0) && !array_key_exists('lock', $components);
     }
 
     /**
@@ -176,7 +175,7 @@ class DmGrammar extends Grammar
             return "select * from ({$sql}) where rownum {$constraint}";
         }
 
-        if (! is_null($query->limit && ! is_null($query->offset))) {
+        if (!is_null($query->limit && !is_null($query->offset))) {
             $start = $query->offset + 1;
             $finish = $query->offset + $query->limit;
 
@@ -194,7 +193,7 @@ class DmGrammar extends Grammar
      */
     public function compileTruncate(Builder $query)
     {
-        return ['truncate table '.$this->wrapTable($query->from) => []];
+        return ['truncate table ' . $this->wrapTable($query->from) => []];
     }
 
     /**
@@ -230,13 +229,26 @@ class DmGrammar extends Grammar
         if (strpos(strtolower($table), ' as ') !== false) {
             $table = str_replace(' as ', ' ', strtolower($table));
         }
-        $tableName = $this->wrap($this->tablePrefix.$table, true);
+        $tableName = $this->wrap($this->tablePrefix . $table, true);
         $segments = explode(' ', $table);
         if (count($segments) > 1) {
-            $tableName = $this->wrap($this->tablePrefix.$segments[0]).' ' . $this->tablePrefix . $segments[1];
+            $tableName = $this->wrap($this->tablePrefix . $segments[0]) . ' ' . $this->tablePrefix . $segments[1];
         }
 
-        return $this->getSchemaPrefix().$tableName;
+        return $this->getSchemaPrefix() . $tableName;
+    }
+
+    /**
+     * Wrap the given JSON selector.
+     *
+     * @param  string  $value
+     * @return string
+     */
+    protected function wrapJsonSelector($value)
+    {
+        [$field, $path] = $this->wrapJsonFieldAndPath($value);
+
+        return 'json_unquote(json_extract(' . $field . $path . '))';
     }
 
     /**
@@ -246,7 +258,7 @@ class DmGrammar extends Grammar
      */
     public function getSchemaPrefix()
     {
-        return ! empty($this->schema_prefix) ? $this->wrapValue($this->schema_prefix).'.' : '';
+        return !empty($this->schema_prefix) ? $this->wrapValue($this->schema_prefix) . '.' : '';
     }
 
     /**
@@ -271,7 +283,7 @@ class DmGrammar extends Grammar
             return $value;
         }
 
-        return '"'.str_replace('"', '""', $value).'"';
+        return '"' . str_replace('"', '""', $value) . '"';
     }
 
     /**
@@ -282,23 +294,23 @@ class DmGrammar extends Grammar
      * @param  string  $sequence
      * @return string
      */
-     public function compileInsertGetId(Builder $query, $values, $sequence = 'id')
-     {
-         if (empty($sequence)) {
-             $sequence = 'id';
-         }
+    public function compileInsertGetId(Builder $query, $values, $sequence = 'id')
+    {
+        if (empty($sequence)) {
+            $sequence = 'id';
+        }
 
-         $backtrace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4)[2]['object'];
+        $backtrace = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 4)[2]['object'];
 
-         if ($backtrace instanceof EloquentBuilder) {
-             $model = $backtrace->getModel();
-             if ($model->sequence && ! isset($values[$model->getKeyName()]) && $model->incrementing) {
-                 $values[$sequence] = null;
-             }
-         }
+        if ($backtrace instanceof EloquentBuilder) {
+            $model = $backtrace->getModel();
+            if ($model->sequence && !isset($values[$model->getKeyName()]) && $model->incrementing) {
+                $values[$sequence] = null;
+            }
+        }
 
-         return $this->compileInsert($query, $values).' returning '.$this->wrap($sequence).' into ?';
-     }
+        return $this->compileInsert($query, $values) . ' returning ' . $this->wrap($sequence) . ' into ?';
+    }
 
     /**
      * Compile an insert statement into SQL.
@@ -314,7 +326,7 @@ class DmGrammar extends Grammar
         // basic routine regardless of an amount of records given to us to insert.
         $table = $this->wrapTable($query->from);
 
-        if (! is_array(reset($values))) {
+        if (!is_array(reset($values))) {
             $values = [$values];
         }
 
@@ -331,7 +343,7 @@ class DmGrammar extends Grammar
             $insertQueries = [];
             foreach ($value as $parameter) {
                 $parameter = (str_replace(['(', ')'], '', $parameter));
-                $insertQueries[] = 'select '.$parameter.' from dual ';
+                $insertQueries[] = 'select ' . $parameter . ' from dual ';
             }
             $parameters = implode('union all ', $insertQueries);
 
@@ -359,17 +371,17 @@ class DmGrammar extends Grammar
 
         $table = $this->wrapTable($query->from);
 
-        if (! is_array(reset($values))) {
+        if (!is_array(reset($values))) {
             $values = [$values];
         }
 
-        if (! is_array(reset($binaries))) {
+        if (!is_array(reset($binaries))) {
             $binaries = [$binaries];
         }
 
         $columns = $this->columnize(array_keys(reset($values)));
         $binaryColumns = $this->columnize(array_keys(reset($binaries)));
-        $columns .= (empty($columns) ? '' : ', ').$binaryColumns;
+        $columns .= (empty($columns) ? '' : ', ') . $binaryColumns;
 
         $parameters = $this->parameterize(reset($values));
         $binaryParameters = $this->parameterize(reset($binaries));
@@ -380,7 +392,7 @@ class DmGrammar extends Grammar
         $value = array_merge($value, $binaryValue);
         $parameters = implode(', ', array_filter($value));
 
-        return "insert into $table ($columns) values ($parameters) returning ".$binaryColumns.', '.$this->wrap($sequence).' into '.$binaryParameters.', ?';
+        return "insert into $table ($columns) values ($parameters) returning " . $binaryColumns . ', ' . $this->wrap($sequence) . ' into ' . $binaryParameters . ', ?';
     }
 
     /**
@@ -402,13 +414,13 @@ class DmGrammar extends Grammar
         $columns = [];
 
         foreach ($values as $key => $value) {
-            $columns[] = $this->wrap($key).' = '.$this->parameter($value);
+            $columns[] = $this->wrap($key) . ' = ' . $this->parameter($value);
         }
 
         $columns = implode(', ', $columns);
 
         // set blob variables
-        if (! is_array(reset($binaries))) {
+        if (!is_array(reset($binaries))) {
             $binaries = [$binaries];
         }
         $binaryColumns = $this->columnize(array_keys(reset($binaries)));
@@ -422,7 +434,7 @@ class DmGrammar extends Grammar
 
         // prepare binary SQLs
         if (count($binarySql)) {
-            $binarySql = (empty($columns) ? '' : ', ').implode(',', $binarySql);
+            $binarySql = (empty($columns) ? '' : ', ') . implode(',', $binarySql);
         }
 
         // If the query has any "join" clauses, we will setup the joins on the builder
@@ -430,7 +442,7 @@ class DmGrammar extends Grammar
         // can get join statements to attach to other tables when they're needed.
         $joins = '';
         if (isset($query->joins)) {
-            $joins = ' '.$this->compileJoins($query, $query->joins);
+            $joins = ' ' . $this->compileJoins($query, $query->joins);
         }
 
         // Of course, update queries may also be constrained by where clauses so we'll
@@ -438,7 +450,7 @@ class DmGrammar extends Grammar
         // intended records are updated by the SQL statements we generate to run.
         $where = $this->compileWheres($query);
 
-        return "update {$table}{$joins} set $columns$binarySql $where returning ".$binaryColumns.', '.$this->wrap($sequence).' into '.$binaryParameters.', ?';
+        return "update {$table}{$joins} set $columns$binarySql $where returning " . $binaryColumns . ', ' . $this->wrap($sequence) . ' into ' . $binaryParameters . ', ?';
     }
 
     /**
@@ -525,11 +537,11 @@ class DmGrammar extends Grammar
      */
     protected function whereNotInRaw(Builder $query, $where)
     {
-        if (! empty($where['values'])) {
+        if (!empty($where['values'])) {
             if (is_array($where['values']) && count($where['values']) > 1000) {
                 return $this->resolveClause($where['column'], $where['values'], 'not in');
             } else {
-                return $this->wrap($where['column']).' not in ('.implode(', ', $where['values']).')';
+                return $this->wrap($where['column']) . ' not in (' . implode(', ', $where['values']) . ')';
             }
         }
 
@@ -547,11 +559,11 @@ class DmGrammar extends Grammar
      */
     protected function whereInRaw(Builder $query, $where)
     {
-        if (! empty($where['values'])) {
+        if (!empty($where['values'])) {
             if (is_array($where['values']) && count($where['values']) > 1000) {
                 return $this->resolveClause($where['column'], $where['values'], 'in');
             } else {
-                return $this->wrap($where['column']).' in ('.implode(', ', $where['values']).')';
+                return $this->wrap($where['column']) . ' in (' . implode(', ', $where['values']) . ')';
             }
         }
 
@@ -563,17 +575,17 @@ class DmGrammar extends Grammar
         $chunks = array_chunk($values, 1000);
         $whereClause = '';
         $i = 0;
-        $type = $this->wrap($column).' '.$type.' ';
+        $type = $this->wrap($column) . ' ' . $type . ' ';
         foreach ($chunks as $ch) {
             // Add or only at the second loop
             if ($i === 1) {
-                $type = ' or '.$type.' ';
+                $type = ' or ' . $type . ' ';
             }
-            $whereClause .= $type.'('.implode(', ', $ch).')';
+            $whereClause .= $type . '(' . implode(', ', $ch) . ')';
             $i++;
         }
 
-        return '('.$whereClause.')';
+        return '(' . $whereClause . ')';
     }
 
     /**
@@ -588,7 +600,7 @@ class DmGrammar extends Grammar
 
         $query->aggregate = null;
 
-        return $sql.' from ('.$this->compileSelect($query).') '.$this->wrapTable('temp_table');
+        return $sql . ' from (' . $this->compileSelect($query) . ') ' . $this->wrapTable('temp_table');
     }
 
     /**
