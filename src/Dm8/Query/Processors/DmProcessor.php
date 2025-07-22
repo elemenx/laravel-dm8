@@ -74,7 +74,7 @@ class DmProcessor extends Processor
                 $model = $builder->getModel();
                 /** @var \LaravelDm8\Dm8\Dm8Connection $connection */
                 $connection = $model->getConnection();
-                if ($model->sequence && $model->incrementing) {
+                if ($model instanceof DmEloquent && $model->sequence && $model->incrementing) {
                     $values[] = (int) $connection->getSequence()->nextValue($model->sequence);
                 }
             }
