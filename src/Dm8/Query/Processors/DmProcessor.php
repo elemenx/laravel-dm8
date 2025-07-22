@@ -19,26 +19,26 @@ class DmProcessor extends Processor
      * @param  string  $sequence
      * @return int
      */
-     public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
-     {
-         $connection = $query->getConnection();
+    public function processInsertGetId(Builder $query, $sql, $values, $sequence = null)
+    {
+        $connection = $query->getConnection();
 
-         $connection->recordsHaveBeenModified();
-         $start = microtime(true);
+        $connection->recordsHaveBeenModified();
+        $start = microtime(true);
 
-         $id = 0;
-         $parameter = 1;
-         $statement = $this->prepareStatement($query, $sql);
-         $values = $this->incrementBySequence($values, $sequence);
-         $parameter = $this->bindValues($values, $statement, $parameter);
-         $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
-         $statement->execute();
+        $id = 0;
+        $parameter = 1;
+        $statement = $this->prepareStatement($query, $sql);
+        $values = $this->incrementBySequence($values, $sequence);
+        $parameter = $this->bindValues($values, $statement, $parameter);
+        $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
+        $statement->execute();
 
-         $values[] = '?';
-         $connection->logQuery($sql, $values, $start);
+        $values[] = '?';
+        $connection->logQuery($sql, $values, $start);
 
-         return (int) $id;
-     }
+        return (int) $id;
+    }
 
     /**
      * Get prepared statement.
@@ -68,7 +68,7 @@ class DmProcessor extends Processor
         $builder = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 5)[3]['object'];
         $builderArgs = debug_backtrace(DEBUG_BACKTRACE_PROVIDE_OBJECT, 5)[2]['args'];
 
-        if (! isset($builderArgs[1][0][$sequence])) {
+        if (!isset($builderArgs[1][0][$sequence])) {
             if ($builder instanceof EloquentBuilder) {
                 /** @var \LaravelDm8\Dm8\Eloquent\DmEloquent $model */
                 $model = $builder->getModel();
@@ -101,6 +101,8 @@ class DmProcessor extends Processor
                 } else {
                     $values[$i] = (string) $values[$i];
                 }
+            } elseif (is_bool($values[$i])) {
+                $values[$i] = (int) $values[$i];
             }
             $type = $this->getPdoType($values[$i]);
             $statement->bindParam($parameter, $values[$i], $type);
@@ -164,7 +166,7 @@ class DmProcessor extends Processor
         // bind output param for the returning clause.
         $statement->bindParam($parameter, $id, PDO::PARAM_INT, -1);
 
-        if (! $statement->execute()) {
+        if (!$statement->execute()) {
             return false;
         }
 
