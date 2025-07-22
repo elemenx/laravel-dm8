@@ -604,6 +604,60 @@ class DmGrammar extends Grammar
     }
 
     /**
+     * Compile an insert ignore statement into SQL.
+     *
+     * @param  \Illuminate\Database\Query\Builder  $query
+     * @param  array  $values
+     * @return string
+     */
+    public function compileInsertOrIgnore(Builder $query, array $values)
+    {
+        if (empty($values)) {
+            return '';
+        }
+
+        // 表名
+        $table = $this->wrapTable($query->from);
+
+        // 统一为数组结构
+        if (!is_array(reset($values))) {
+            $values = [$values];
+        }
+
+        // 获取所有字段
+        $columns = $this->columnize(array_keys($values[0]));
+
+        // 构建 USING 子查询
+        $selects = [];
+        foreach ($values as $value) {
+            $row = [];
+            foreach ($value as $col => $val) {
+                $row[] = $this->parameter($val) . ' AS ' . $this->wrap($col);
+            }
+            $selects[] = 'SELECT ' . implode(', ', $row) . ' FROM DUAL';
+        }
+
+        $usingSql = implode(' UNION ALL ', $selects);
+
+        // 构建 ON 条件（使用所有列进行匹配）
+        $onConditions = [];
+        foreach (array_keys($values[0]) as $col) {
+            $onConditions[] = "t.{$this->wrap($col)} = s.{$this->wrap($col)}";
+        }
+        $onClause = implode(' AND ', $onConditions);
+
+        // 构建 INSERT 子句
+        $insertColumns = array_keys($values[0]);
+        $wrappedInsertColumns = implode(', ', array_map([$this, 'wrap'], $insertColumns));
+        $valueRefs = implode(', ', array_map(function ($col) {
+            return 's.' . $this->wrap($col);
+        }, $insertColumns));
+
+        return "MERGE INTO {$table} t USING ({$usingSql}) s ON ({$onClause}) "
+            . "WHEN NOT MATCHED THEN INSERT ({$wrappedInsertColumns}) VALUES ({$valueRefs})";
+    }
+
+    /**
      * Prepare the bindings for an update statement.
      *
      * Booleans, integers, and doubles are inserted into JSON updates as raw values.
